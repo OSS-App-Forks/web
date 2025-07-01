@@ -17,6 +17,28 @@ $(() => {
   $('[data-toggle="tooltip"]').tooltip({ html: true, container: "body" });
 });
 
+function copyLease() {
+  const button = $(this);
+  const hwaddr = button.data("hwaddr");
+  const ip = button.data("ip");
+  const name = button.data("name");
+
+  // Handle cases where name is not available
+  const hostname = name === "*" || name === null ? "" : name;
+
+  const textToCopy = `${hwaddr},${ip},${hostname}`;
+
+  navigator.clipboard
+    .writeText(textToCopy)
+    .then(() => {
+      utils.showAlert("success", "far fa-copy", "Copied to clipboard!", textToCopy);
+    })
+    .catch(err => {
+      console.error("Could not copy text: ", err); // eslint-disable-line no-console
+      utils.showAlert("error", "", "Failed to copy to clipboard", "See browser console for details");
+    });
+}
+
 function renderHostnameCLID(data, type) {
   // Display and search content
   if (type === "display" || type === "filter") {
@@ -64,6 +86,7 @@ $(() => {
     ],
     drawCallback() {
       $('button[id^="deleteLease_"]').on("click", deleteLease);
+      $(".copy-lease").on("click", copyLease);
 
       // Hide buttons if all messages were deleted
       const hasRows = this.api().rows({ filter: "applied" }).data().length > 0;
@@ -74,15 +97,23 @@ $(() => {
     },
     rowCallback(row, data) {
       $(row).attr("data-id", data.ip);
-      const button =
+      const copyBtn =
+        '<button type="button" class="btn btn-default btn-xs copy-lease" ' +
+        'data-hwaddr="' +
+        data.hwaddr +
+        '" data-ip="' +
+        data.ip +
+        '" data-name="' +
+        data.name +
+        '" title="Copy as static DHCP lease">' +
+        '<span class="far fa-copy"></span></button>';
+      const deleteBtn =
         '<button type="button" class="btn btn-danger btn-xs" id="deleteLease_' +
         data.ip +
         '" data-del-ip="' +
         data.ip +
-        '">' +
-        '<span class="far fa-trash-alt"></span>' +
-        "</button>";
-      $("td:eq(6)", row).html(button);
+        '"><span class="far fa-trash-alt"></span></button>';
+      $("td:eq(6)", row).html(copyBtn + "&nbsp;" + deleteBtn);
     },
     select: {
       style: "multi",
