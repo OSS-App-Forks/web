@@ -28,7 +28,7 @@ $(() => {
 // eslint-disable-next-line no-unused-vars -- Used by other scripts (e.g., footer.js)
 function base64ToString(base64) {
   // Remove padding and whitespace
-  const cleanBase64 = base64.replaceAll(/[=\s]/gv, "");
+  const cleanBase64 = base64.replaceAll(/[=\s]/gu, "");
   const base64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
   // Decode base64 to bytes
@@ -63,7 +63,7 @@ function escapeHtml(text) {
   // Return early when text is not a string
   if (typeof text !== "string") return text;
 
-  return text.replaceAll(/[&<>"']/gv, m => map[m]);
+  return text.replaceAll(/[&<>"']/gu, m => map[m]);
 }
 
 function unescapeHtml(text) {
@@ -85,7 +85,7 @@ function unescapeHtml(text) {
   if (text === null) return null;
 
   return text.replaceAll(
-    /&(?:amp|lt|gt|quot|#039|Uuml|uuml|Auml|auml|Ouml|ouml|szlig);/gv,
+    /&(?:amp|lt|gt|quot|#039|Uuml|uuml|Auml|auml|Ouml|ouml|szlig);/gu,
     m => map[m]
   );
 }
@@ -227,7 +227,7 @@ function validateIPv4CIDR(ip) {
   // Format: xxx.xxx.xxx.xxx[/yy] where each xxx is 0-255 and optional yy is 1-32
   const ipv4validator = new RegExp(
     `^${ipv4elem}\\.${ipv4elem}\\.${ipv4elem}\\.${ipv4elem}${v4cidr}$`,
-    "v"
+    "u"
   );
 
   return ipv4validator.test(ip);
@@ -243,19 +243,19 @@ function validateIPv6CIDR(ip) {
 
   const ipv6validator = new RegExp(
     `^(((?:${ipv6elem}))*((?::${ipv6elem}))*::((?:${ipv6elem}))*((?::${ipv6elem}))*|((?:${ipv6elem}))((?::${ipv6elem})){7})${v6cidr}$`,
-    "v"
+    "u"
   );
 
   return ipv6validator.test(ip);
 }
 
 function validateMAC(mac) {
-  const macvalidator = /^([\da-fA-F]{2}:){5}([\da-fA-F]{2})$/v;
+  const macvalidator = /^([\da-fA-F]{2}:){5}([\da-fA-F]{2})$/u;
   return macvalidator.test(mac);
 }
 
 function validateHostname(name) {
-  const namevalidator = /[^<>;"]/v;
+  const namevalidator = /[^<>;"]/u;
   return namevalidator.test(name);
 }
 
@@ -527,7 +527,7 @@ function hexEncode(text) {
 function hexDecode(text) {
   if (typeof text !== "string" || text.length === 0) return "";
 
-  const hexes = text.match(/.{1,4}/gv);
+  const hexes = text.match(/.{1,4}/gu);
   if (!hexes || hexes.length === 0) return "";
 
   return hexes.map(hex => String.fromCodePoint(Number.parseInt(hex, 16))).join("");
