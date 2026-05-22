@@ -231,7 +231,7 @@ function setTooltipContent(tooltipEl, tooltip) {
     // Do not display entries with value of 0 in bar chart,
     // but pass through entries with "0.0%" (in pie charts)
     if (num[1] !== "0") {
-      tooltipHtml += `<tr><td>${span}${utils.escapeHtml(body.toString())}</td></tr>`;
+      tooltipHtml += `<tr><td>${span}${body}</td></tr>`;
       printed++;
     }
   }
