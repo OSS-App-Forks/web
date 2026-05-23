@@ -167,7 +167,7 @@ function updateClientsOverTime() {
     const clients = {};
     for (const [ip, clientData] of Object.entries(data.clients)) {
       clients[ip] = numClients++;
-      labels.push(clientData.name !== null ? clientData.name : ip);
+      labels.push(clientData.name !== null ? utils.escapeHtml(clientData.name) : ip);
     }
 
     // Remove possibly already existing data
