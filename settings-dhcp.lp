@@ -174,6 +174,10 @@ mg.include('scripts/lua/settings_header.lp','r')
                 <div class="row">
                     <div class="col-xs-12 col-md-6">
                         <p>Specify per host parameters for the DHCP server. This allows a machine with a particular hardware address to be always allocated the same hostname, IP address and lease time. A hostname specified like this overrides any supplied by the DHCP client on the machine. It is also allowable to omit the hardware address and include the hostname, in which case the IP address and lease times will apply to any machine claiming that name.</p>
+                        <div>
+                            <input type="checkbox" id="dhcp-sync-to-dns">&nbsp;<label for="dhcp-sync-to-dns"><strong>Always resolve static DHCP hostnames</strong></label>
+                            <p class="help-block">When enabled, Pi-hole will automatically generate DNS resolution rules for all static DHCP hostnames and add them to <code>misc.dnsmasq_lines</code>. This allows these hosts to resolve even if they are inactive.</p>
+                        </div>
                         <textarea class="form-control field-sizing-content" id="dhcp-hosts" data-key="dhcp.hosts" style="resize: vertical;"></textarea><br>&nbsp;
                         <p>Each entry should be on a separate line, and should be of the form:</p>
                         <pre>[&lt;hwaddr&gt;][,id:&lt;client_id&gt;|*][,set:&lt;tag&gt;][,tag:&lt;tag&gt;][,&lt;ipaddr&gt;][,&lt;hostname&gt;][,&lt;lease_time&gt;][,ignore]</pre>
