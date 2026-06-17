@@ -242,8 +242,143 @@ function delLease(ip) {
 }
 
 function fillDHCPhosts(data) {
-  $("#dhcp-hosts").val(data.value.join("\n"));
+  let value = data.value.join("\n");
+  const syncEnabled = value.includes("id:pihole-dhcp-sync,ignore");
+
+  // Remove the internal marker before showing in the textarea
+  value = value.replace(/^id:pihole-dhcp-sync,ignore\n?/gm, "");
+
+  $("#dhcp-sync-to-dns").prop("checked", syncEnabled);
+  $("#dhcp-hosts").val(value);
 }
+
+window.beforeSave = function () {
+  const syncEnabled = $("#dhcp-sync-to-dns").is(":checked");
+  let dhcpHostsValue = $("#dhcp-hosts").val().trim();
+
+  // Always ensure the marker is not in the user-visible string
+  dhcpHostsValue = dhcpHostsValue.replace(/^id:pihole-dhcp-sync,ignore\n?/gm, "");
+
+  const patch = { config: {} };
+
+  if (syncEnabled) {
+    // 1. Add marker to dhcp.hosts (but keep it out of the UI textarea for the next reload)
+    const dhcpHostsWithMarker = "id:pihole-dhcp-sync,ignore\n" + dhcpHostsValue;
+    // We don't update the UI here, saveSettings will grab the value from the data-key
+    // but since we want to persist the marker, we must manually update the field before save
+    $("#dhcp-hosts").val(dhcpHostsWithMarker);
+
+    // 2. Generate address lines for misc.dnsmasq_lines
+    let dnsDomain = "";
+    $.ajax({
+      url: document.body.dataset.apiurl + "/config/dns/domain",
+      method: "GET",
+      async: false,
+    }).done(data => {
+      if (data.config && data.config.dns && data.config.dns.domain) {
+        dnsDomain = data.config.dns.domain.name || data.config.dns.domain;
+      }
+    });
+
+    const dhcpHosts = dhcpHostsValue.split("\n");
+    $.ajax({
+      url: document.body.dataset.apiurl + "/config/misc/dnsmasq_lines",
+      method: "GET",
+      async: false,
+    }).done(data => {
+      let dnsLines = data.config.misc.dnsmasq_lines;
+      // Filter out existing synced records
+      dnsLines = dnsLines.filter(l => !l.includes("# from-dhcp"));
+
+      dhcpHosts.forEach(line => {
+        if (!line.trim() || line.startsWith("#") || line.startsWith("id:")) {
+          return;
+        }
+
+        const parts = line.split(",");
+        // IP detection (v4 or v6)
+        const ip = parts.find(p => {
+          const t = p.trim().replace(/[\[\]]/g, "");
+          if (/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(t)) {
+            return true;
+          }
+
+          if (t.includes(":")) {
+            const isMac = /^([0-9A-Fa-f]{1,2}[:-]){5}([0-9A-Fa-f]{1,2})$/.test(t);
+            const isIPv6 = /^(?:[A-F0-9]{0,4}:){2,7}[A-F0-9]{0,4}$/i.test(t);
+            return isIPv6 && !isMac;
+          }
+
+          return false;
+        });
+
+        // Hostname detection
+        const hostname = parts.find(p => {
+          const t = p.trim();
+          if (!t || t === "ignore" || t === "infinite") {
+            return false;
+          }
+
+          if (/^([0-9A-Fa-f]{1,2}[:-]){5}([0-9A-Fa-f]{1,2})$/.test(t)) {
+            return false;
+          }
+
+          const cleanT = t.replace(/[\[\]]/g, "");
+          if (/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(cleanT) || /^(?:[A-F0-9]{0,4}:){2,7}[A-F0-9]{0,4}$/i.test(cleanT)) {
+            return false;
+          }
+
+          if (t.startsWith("set:") || t.startsWith("tag:") || t.startsWith("id:")) {
+            return false;
+          }
+
+          return true;
+        });
+
+        if (ip && hostname) {
+          const cleanIp = ip.trim().replace(/[\[\]]/g, "");
+          const cleanHost = hostname.trim();
+          if (dnsDomain && typeof dnsDomain === "string") {
+            dnsLines.push(`address=/${cleanHost}/${cleanHost}.${dnsDomain}/${cleanIp} # from-dhcp`);
+          } else {
+            dnsLines.push(`address=/${cleanHost}/${cleanIp} # from-dhcp`);
+          }
+        }
+      });
+
+      patch.config.misc = { dnsmasq_lines: dnsLines };
+    });
+  } else {
+    // Ensure marker is removed
+    $("#dhcp-hosts").val(dhcpHostsValue);
+
+    // Remove synced records
+    $.ajax({
+      url: document.body.dataset.apiurl + "/config/misc/dnsmasq_lines",
+      method: "GET",
+      async: false,
+    }).done(data => {
+      let dnsLines = data.config.misc.dnsmasq_lines;
+      const originalCount = dnsLines.length;
+      dnsLines = dnsLines.filter(l => !l.includes("# from-dhcp"));
+
+      if (dnsLines.length !== originalCount) {
+        patch.config.misc = { dnsmasq_lines: dnsLines };
+      }
+    });
+  }
+
+  // Apply all changes in a single PATCH request
+  if (Object.keys(patch.config).length > 0) {
+    $.ajax({
+      url: document.body.dataset.apiurl + "/config",
+      method: "PATCH",
+      async: false,
+      data: JSON.stringify(patch),
+      contentType: "application/json",
+    });
+  }
+};
 
 function processDHCPConfig() {
   $.ajax({

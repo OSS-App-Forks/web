@@ -19,6 +19,10 @@ $(() => {
 
   // Handle saving of settings
   $(".save-button").on("click", () => {
+    if (typeof window.beforeSave === "function") {
+      window.beforeSave();
+    }
+
     saveSettings();
   });
 });
